@@ -72,5 +72,90 @@ Error generating stack: `+e.message+`
   window.addEventListener('hashchange',()=>setTimeout(attach,80));document.addEventListener('DOMContentLoaded',attach);setInterval(attach,900);setTimeout(attach,200);
 })();
 </script>
+
+<script>
+(function(){
+  'use strict';
+  var KEY='drjp:metas:v1';
+  var areas=['Cirurgia','Clínica Médica','Medicina Preventiva','Ginecologia','Obstetrícia','Pediatria'];
+  var metrics=[['aulas','Aulas'],['materiais','Materiais'],['questoes','Questões']];
+  var defaults={areas:{},simulados:{week:1,month:4}};
+  areas.forEach(function(a){defaults.areas[a]={week:{aulas:0,materiais:0,questoes:0},month:{aulas:0,materiais:0,questoes:0}}});
+  function read(){try{var v=JSON.parse(localStorage.getItem(KEY)||'null');if(v&&v.areas)return v;}catch(e){}return JSON.parse(JSON.stringify(defaults));}
+  var data=read(),root=null;
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(data));var s=document.getElementById('drjp-save-state');if(s)s.textContent='Salvo neste navegador';}catch(e){alert('Não foi possível salvar. Verifique o espaço disponível no navegador.');}}
+  function esc(v){return String(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function render(){
+    if(location.hash!=='#/metas'){if(root){root.remove();root=null;}return;}
+    if(root)return;
+    root=document.createElement('section');root.id='drjp-study-goals';
+    root.innerHTML='<style>'+
+      '#drjp-study-goals{position:fixed;inset:0;z-index:99999;overflow:auto;background:#f8fafc;color:#0f172a;font-family:Inter,ui-sans-serif,system-ui,sans-serif;padding:clamp(16px,3vw,36px)}'+
+      'html.dark #drjp-study-goals{background:#020617;color:#f8fafc}'+
+      '#drjp-study-goals *{box-sizing:border-box}'+
+      '#drjp-study-goals .wrap{max-width:1180px;margin:auto}'+
+      '#drjp-study-goals .top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:26px;flex-wrap:wrap}'+
+      '#drjp-study-goals h1{font-size:clamp(24px,4vw,34px);font-weight:750;letter-spacing:-.04em}'+
+      '#drjp-study-goals .muted{color:#64748b;font-size:13px}html.dark #drjp-study-goals .muted{color:#94a3b8}'+
+      '#drjp-study-goals .btn{border:1px solid #cbd5e1;border-radius:11px;padding:9px 13px;font-size:13px;font-weight:650;background:white;color:#0f172a;cursor:pointer}html.dark #drjp-study-goals .btn{background:#0f172a;color:#e2e8f0;border-color:#334155}'+
+      '#drjp-study-goals .btn.primary{background:#15803d;color:white;border-color:#15803d}'+
+      '#drjp-study-goals .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:14px}'+
+      '#drjp-study-goals .card{background:white;border:1px solid #e2e8f0;border-radius:17px;padding:18px;box-shadow:0 2px 10px #0f172a08}html.dark #drjp-study-goals .card{background:#0f172a;border-color:#1e293b;box-shadow:none}'+
+      '#drjp-study-goals h2{font-size:17px;font-weight:700;margin:0 0 14px}'+
+      '#drjp-study-goals .period{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}'+
+      '#drjp-study-goals .periodbox{border:1px solid #e2e8f0;border-radius:12px;padding:11px}html.dark #drjp-study-goals .periodbox{border-color:#334155}'+
+      '#drjp-study-goals .periodbox strong{display:block;font-size:12px;color:#15803d;margin-bottom:8px}'+
+      '#drjp-study-goals label{display:block;font-size:12px;color:#64748b;margin:8px 0 4px}html.dark #drjp-study-goals label{color:#94a3b8}'+
+      '#drjp-study-goals input{width:100%;min-width:0;border:1px solid #cbd5e1;border-radius:8px;padding:8px;background:#fff;color:#0f172a;font:inherit;font-size:14px}html.dark #drjp-study-goals input{background:#020617;color:#f8fafc;border-color:#334155}'+
+      '#drjp-study-goals .sim{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}'+
+      '#drjp-study-goals .foot{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin:18px 0 30px}'+
+      '@media(max-width:520px){#drjp-study-goals .period{grid-template-columns:1fr}}'+
+      '</style><div class="wrap"><div class="top"><div><div class="muted">DR. JUNIOR PARENTE · PLANEJAMENTO</div><h1>Metas de estudo</h1><div class="muted">Defina objetivos semanais e mensais por área de conhecimento.</div></div><button class="btn" id="drjp-back">← Voltar ao dashboard</button></div>'+
+      '<div class="grid" id="drjp-areas"></div>'+
+      '<div class="card" style="margin-top:16px"><h2>Simulados e provas completas</h2><div class="sim"><div><label for="drjp-sim-week">Meta semanal</label><input id="drjp-sim-week" type="number" min="0" step="1"></div><div><label for="drjp-sim-month">Meta mensal</label><input id="drjp-sim-month" type="number" min="0" step="1"></div></div><p class="muted" style="margin-top:10px">Referência inicial: 1 simulado por semana e 4 por mês. Os valores podem ser ajustados.</p></div>'+
+      '<div class="foot"><span class="muted" id="drjp-save-state" aria-live="polite">Alterações salvas automaticamente.</span><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="drjp-export">Exportar metas</button><label class="btn" for="drjp-import" style="margin:0;cursor:pointer">Importar metas</label><input id="drjp-import" type="file" accept="application/json" hidden></div></div></div>';
+    document.body.appendChild(root);
+    var cards=root.querySelector('#drjp-areas');
+    areas.forEach(function(area,idx){
+      var d=data.areas[area]||defaults.areas[area];
+      var card=document.createElement('article');card.className='card';
+      var html='<h2>'+esc(area)+'</h2><div class="period">';
+      [['week','Semanal'],['month','Mensal']].forEach(function(p){
+        html+='<div class="periodbox"><strong>'+p[1]+'</strong>';
+        metrics.forEach(function(m){
+          html+='<label>'+m[1]+'</label><input type="number" min="0" step="1" inputmode="numeric" data-area="'+esc(area)+'" data-period="'+p[0]+'" data-metric="'+m[0]+'" value="'+Math.max(0,Number(d[p[0]][m[0]]||0))+'">';
+        });html+='</div>';
+      });html+='</div>';
+      card.innerHTML=html;cards.appendChild(card);
+    });
+    root.querySelector('#drjp-sim-week').value=data.simulados.week;
+    root.querySelector('#drjp-sim-month').value=data.simulados.month;
+    root.querySelectorAll('input[data-area]').forEach(function(input){
+      input.addEventListener('change',function(){
+        var a=input.dataset.area,p=input.dataset.period,m=input.dataset.metric;
+        if(!data.areas[a])data.areas[a]=JSON.parse(JSON.stringify(defaults.areas[a]));
+        data.areas[a][p][m]=Math.max(0,Math.floor(Number(input.value)||0));input.value=data.areas[a][p][m];save();
+      });
+    });
+    ['week','month'].forEach(function(p){
+      root.querySelector('#drjp-sim-'+p).addEventListener('change',function(e){data.simulados[p]=Math.max(0,Math.floor(Number(e.target.value)||0));e.target.value=data.simulados[p];save();});
+    });
+    root.querySelector('#drjp-back').addEventListener('click',function(){location.hash='#/dashboard';});
+    root.querySelector('#drjp-export').addEventListener('click',function(){
+      var blob=new Blob([JSON.stringify({app:'dr-junior-parente-study-goals',version:1,data:data},null,2)],{type:'application/json'});
+      var url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='metas-dr-junior-parente.json';a.click();URL.revokeObjectURL(url);
+    });
+    root.querySelector('#drjp-import').addEventListener('change',function(e){
+      var f=e.target.files&&e.target.files[0];if(!f)return;var reader=new FileReader();
+      reader.onload=function(){try{var v=JSON.parse(reader.result);if(!v.data||!v.data.areas)throw Error('invalid');data=v.data;save();root.remove();root=null;render();}catch(err){alert('Arquivo de metas inválido.');}};
+      reader.readAsText(f);
+    });
+  }
+  window.addEventListener('hashchange',function(){if(root){root.remove();root=null;}render();});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render);else render();
+  var observer=new MutationObserver(function(){if(location.hash==='#/metas'&&!root)render();});
+  observer.observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
   </body>
 </html>
